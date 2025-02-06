@@ -1,0 +1,32 @@
+---
+# tasks file for lighthouse-role
+- name: Install Nginx package
+  ansible.builtin.yum:
+    name: nginx
+    state: present
+  notify: Start Nginx
+
+- name: Write general Nginx configuration
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+    mode: "0644"
+  notify: Reload Nginx
+
+- name: Ensure Git is installed for Lighthouse
+  ansible.builtin.yum:
+    name: git
+    state: present
+
+- name: Git clone Lighthouse repository
+  ansible.builtin.git:
+    repo: "{{ lighthouse_git }}"
+    version: master
+    dest: "{{ lighthouse_dir }}"
+
+- name: Write Lighthouse specific Nginx configuration
+  ansible.builtin.template:
+    src: lighthouse.conf.j2
+    dest: /etc/nginx/conf.d/default.conf
+    mode: "0644"
+  notify: Reload Nginx
