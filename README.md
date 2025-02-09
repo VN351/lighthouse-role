@@ -1,38 +1,75 @@
-Role Name
-=========
+# Ansible role для установки Lighthouse
 
-A brief description of the role goes here.
+## Содержание
+- [Обзор](#обзор)
+- [Требования](#требования)
+- [Переменные](#переменные)
+- [Использование](#использование)
+- [Логика работы](#логика-работы-роли)
 
-Requirements
-------------
+## Обзор
+Данная роль объединяет в себе всю необходимую логику для настройки и развертывания сервиса Lighthouse, а также конфигурации веб-сервера Nginx. 
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+## Требования
 
-Role Variables
---------------
+- **Ansible:** Версия 2.9 или выше.
+- **Управляемые хосты:**
+  - Операционная система: Совместима с дистрибутивами на основе RPM (например, CentOS, RHEL, Fedora).
+  - Менеджер пакетов: Должен быть доступен yum.
+- **Сетевой доступ:**
+  - Возможность скачивания пакетов с внешних URL.
+  - SSH-доступ к управляемым хостам.
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+## Переменные
 
-Dependencies
-------------
+# defaults/main.yml
+- vlighthouse_git – Репозиторий Github проекта lighthouse. 
+  *Пример:* "https://github.com/VKCOM/lighthouse.git"
+# vars/main.yml
+- lighthouse_dir – Дирректория установки lighthouse.  
+  *Пример:* "/etc/nginx/lighthouse"
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
 
-Example Playbook
-----------------
+## Использование
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+1. **Установка роли:**  
+   Склонируйте или добавьте роль lighthouse-role в ваш проект Ansible.
 
-    - hosts: servers
+2. **Интеграция в playbook:**  
+    Добавьте роль в ваш основной playbook:
+    ```yml
+    - name: Install Nginx and Lighthouse
+      hosts: lighthouse
+      become: true
       roles:
-         - { role: username.rolename, x: 42 }
+        - lighthouse
+    ```
 
-License
--------
+## Логика работы роли
 
-BSD
+1. **Установка пакетов и зависимостей:**  
+   При выполнении роли производится установка необходимых пакетов (например, nginx), если они ещё не установлены.
 
-Author Information
-------------------
+2. **Клонирование репозитория Lighthouse:**  
+   Роль использует переменную lighthouse_git для указания URL репозитория и клонирует его в заданный каталог, определённый переменной lighthouse_dir.
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+3. **Копирование и генерация конфигурационных файлов:**  
+   - **Nginx:** Используется шаблон nginx.conf.j2, который содержит настройки основного конфигурационного файла. В примере шаблона присутствуют строки:
+   ```nginx
+   nginx
+     include /usr/share/nginx/modules/*.conf;
+
+     events {
+         worker_connections 1024;
+     }
+   ```
+   это позволяет включить файлы модулей и задать базовые параметры сервера.
+   - **Lighthouse:** Шаблон lighthouse.conf.j2 генерирует конфигурационный файл с параметрами для сервиса Lighthouse.
+
+4. **Обработка изменений и перезагрузка сервисов:**  
+   Все задачи, связанные с копированием шаблонов или установкой пакетов, уведомляют обработчик, который находится в файле handlers/main.yml. Этот обработчик перезагружает сервис Nginx, что гарантирует применение новых настроек.
+
+5. **Разделение переменных для гибкости конфигурации:**  
+   Переменные вынесены в разные файлы:
+   - defaults/main.yml позволяет задавать дефолтное значение для клонируемого репозитория.
+   - vars/main.yml отвечает за путь установки или хранения данных сервиса Lighthouse.
